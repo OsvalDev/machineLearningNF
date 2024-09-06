@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import train_test_split
 import seaborn as sns
 import matplotlib.pyplot as plt
 import os
@@ -27,9 +26,39 @@ def gradientDescentFunction(params, xFeatures, yResults, alpha):
 # Scaling Function
 def scalingFunction(xFeatures):
     xFeatures = np.array(xFeatures)
-    for i in range(1, xFeatures.shape[1]):  # Skip bias column
+    for i in range(1, xFeatures.shape[1]):
         xFeatures[:, i] = (xFeatures[:, i] - np.mean(xFeatures[:, i])) / np.max(xFeatures[:, i])
     return xFeatures
+
+import numpy as np
+
+# Function to split de datset in train and test
+def trainTestSplit(X, y, testSize=0.8, randomState=None):
+    if randomState is not None:
+        np.random.seed(randomState)
+    
+    # Shuffle indexes
+    indexes = np.arange(X.shape[0])
+    np.random.shuffle(indexes)
+    
+    # Calculate split index
+    split_index = int(len(indexes) * testSize)
+    
+    # Split the indexes
+    testIndexes = indexes[:split_index]
+    trainIndexes = indexes[split_index:]
+    
+    # Split the data
+    XTrain, XTest = X[trainIndexes], X[testIndexes]
+    yTrain, yTest = y[trainIndexes], y[testIndexes]
+    
+    return XTrain, XTest, yTrain, yTest
+
+# Calculate R squared Value
+def rSquared(yReal, yPred):
+    ssTotal = np.sum((yReal - np.mean(yReal)) ** 2)
+    ssResidual = np.sum((yReal - yPred) ** 2)
+    return 1 - (ssResidual / ssTotal)
 
 # Process Data Set
 # Load and clean data
@@ -47,8 +76,8 @@ y = dataset['Rented Bike Count'].values
 X = np.concatenate([np.ones((X.shape[0], 1)), X], axis=1)
 
 # Split data into training, validation, and test sets
-XTrain, XTemp, yTrain, yTemp = train_test_split(X, y, test_size=0.4, random_state=42)
-XVal, XTest, yVal, yTest = train_test_split(XTemp, yTemp, test_size=0.5, random_state=42)
+XTrain, XTemp, yTrain, yTemp = trainTestSplit(X, y, testSize=0.4, randomState=42)
+XVal, XTest, yVal, yTest = trainTestSplit(XTemp, yTemp, testSize=0.5, randomState=42)
 
 # Scale data
 XTrainScaled = scalingFunction(XTrain)
@@ -57,7 +86,7 @@ XTestScaled = scalingFunction(XTest)
 
 # Computation
 params = np.zeros(XTrainScaled.shape[1])  # Initialize parameters
-alpha = 0.7
+alpha = 0.01
 epochs = 10000
 
 trainErrors = []
@@ -80,12 +109,6 @@ print("You can find graphs with result in results folder.")
 yTrainPred = hypothesisFunction(params, XTrainScaled)
 yValPred = hypothesisFunction(params, XValScaled)
 yTestPred = hypothesisFunction(params, XTestScaled)
-
-# Calculate R squared Value
-def rSquared(yReal, yPred):
-    ssTotal = np.sum((yReal - np.mean(yReal)) ** 2)
-    ssResidual = np.sum((yReal - yPred) ** 2)
-    return 1 - (ssResidual / ssTotal)
 
 trainRSquared = rSquared(yTrain, yTrainPred)
 valRSquared = rSquared(yVal, yValPred)
@@ -111,27 +134,26 @@ plt.savefig('results/errorPlot.png')
 plt.close()
 
 # Plot comparison of expected vs predicted values
-plt.figure(figsize=(14, 6))
+plt.figure(figsize=(12, 6))
 
-# Training set
+# Gráfico de dispersión para el conjunto de entrenamiento
 plt.subplot(1, 2, 1)
-plt.plot(range(len(yTrain)), yTrain, label='Actual Train Values', color='blue')
-plt.plot(range(len(yTrain)), yTrainPred, label='Predicted Train Values', color='red')
-plt.xlabel('Index')
-plt.ylabel('Rented Bike Count')
+plt.scatter(yTrain, yTrainPred, color='blue', alpha=0.5)
+plt.plot([min(yTrain), max(yTrain)], [min(yTrain), max(yTrain)], color='red', linewidth=2)  # Línea y=x
+plt.xlabel('Actual Values (Train)')
+plt.ylabel('Predicted Values (Train)')
 plt.title('Training Set: Actual vs Predicted')
-plt.legend()
 plt.grid(True)
 
-# Test set
+# Gráfico de dispersión para el conjunto de prueba
 plt.subplot(1, 2, 2)
-plt.plot(range(len(yTest)), yTest, label='Actual Test Values', color='blue')
-plt.plot(range(len(yTest)), yTestPred, label='Predicted Test Values', color='red')
-plt.xlabel('Index')
-plt.ylabel('Rented Bike Count')
+plt.scatter(yTest, yTestPred, color='green', alpha=0.5)
+plt.plot([min(yTest), max(yTest)], [min(yTest), max(yTest)], color='red', linewidth=2)  # Línea y=x
+plt.xlabel('Actual Values (Test)')
+plt.ylabel('Predicted Values (Test)')
 plt.title('Test Set: Actual vs Predicted')
-plt.legend()
 plt.grid(True)
+
 
 plt.tight_layout()
 plt.savefig('results/comparisonPlot.png')
